@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Unlicensed
 
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.0;
 
 
 interface IERC20 {
@@ -233,7 +233,7 @@ library SafeMath {
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address payable) {
-        return msg.sender;
+        return payable(msg.sender);
     }
 
     function _msgData() internal view virtual returns (bytes memory) {
@@ -403,7 +403,7 @@ contract Ownable is Context {
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
-    constructor () internal {
+    constructor() {
         address msgSender = _msgSender();
         _owner = msg.sender;
         emit OwnershipTransferred(address(0), msgSender);
@@ -454,14 +454,14 @@ contract Ownable is Context {
     function lock(uint256 time) public virtual onlyOwner {
         _previousOwner = _owner;
         _owner = address(0);
-        _lockTime = now + time;
+        _lockTime = block.timestamp + time;
         emit OwnershipTransferred(_owner, address(0));
     }
     
     //Unlocks the contract for owner when _lockTime is exceeds
     function unlock() public virtual {
         require(_previousOwner == msg.sender, "You don't have permission to unlock");
-        require(now < _lockTime , "Contract is locked until 7 days");
+        require(block.timestamp < _lockTime , "Contract is locked until 7 days");
         emit OwnershipTransferred(_owner, _previousOwner);
         _owner = _previousOwner;
     }
@@ -681,7 +681,7 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
 }
 
 
-contract DummyToken is Context, IERC20, Ownable {
+contract GOLDSEED is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -695,13 +695,13 @@ contract DummyToken is Context, IERC20, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 100000000000 * 10**18;
+    uint256 private _tTotal = 200000000000 * 10**9;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string private _name = "Dummy Token";
-    string private _symbol = "DMT";
-    uint8 private _decimals = 18;
+    string private _name = "GOLDSEED";
+    string private _symbol = "GSD";
+    uint8 private _decimals = 9;
     
     uint256 public _taxFee = 0;
     uint256 private _previousTaxFee = _taxFee;
@@ -714,8 +714,8 @@ contract DummyToken is Context, IERC20, Ownable {
     address public deadWallet = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public _marketingFee = 0;
-    address public marketingWallet = 0xE05beC01c6063A68b177b545f77519DF535e92F2;
     uint256 private _previousMarketingFee = _marketingFee;
+    address public marketingWallet = 0xE05beC01c6063A68b177b545f77519DF535e92F2;
 
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
@@ -723,8 +723,8 @@ contract DummyToken is Context, IERC20, Ownable {
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = false;
     
-    uint256 public _maxTxAmount = 1000000000000 * 10**18;
-    uint256 private numTokensSellToAddToLiquidity = 50000000 * 10**18;
+    uint256 public _maxTxAmount = 200000000000 * 10**9;
+    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**9;
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -740,7 +740,7 @@ contract DummyToken is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
     
-    constructor () public {
+    constructor() {
         _rOwned[_msgSender()] = _rTotal;
         
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1); //Testnet
@@ -957,7 +957,7 @@ contract DummyToken is Context, IERC20, Ownable {
         _taxFee = 3;
         _liquidityFee = 3;
         _burnFee = 2;
-        _marketingFee = 1;
+        _marketingFee = 2;
     }
     
     function isExcludedFromFee(address account) public view returns(bool) {
@@ -1138,25 +1138,42 @@ contract DummyToken is Context, IERC20, Ownable {
     }
     
     //Call this function after finalizing the presale on DxSale
-    function enableAllFees() external onlyOwner() {
+    function enableAllFeesByOwner() external onlyOwner() {
         _taxFee = 3;
         _previousTaxFee = _taxFee;
         _liquidityFee = 3;
         _previousLiquidityFee = _liquidityFee;
         _burnFee = 2;
-        _previousBurnFee = _taxFee;
-        _marketingFee = 1;
+        _previousBurnFee = _burnFee;
+        _marketingFee = 2;
         _previousMarketingFee = _marketingFee;
         inSwapAndLiquify = true;
         emit SwapAndLiquifyEnabledUpdated(true);
+    }
+    
+    function disableAllFeesByOwner() external onlyOwner() {
+        _taxFee = 0;
+        _previousTaxFee = 0;
+        _liquidityFee = 0;
+        _previousLiquidityFee = 0;
+        _burnFee = 0;
+        _previousBurnFee = 0;
+        _marketingFee = 0;
+        _previousMarketingFee = 0;
+        inSwapAndLiquify = false;
+        emit SwapAndLiquifyEnabledUpdated(false);
     }
 
     function setMarketingWallet(address newWallet) external onlyOwner() {
         marketingWallet = newWallet;
     }
+    
+    function SetNumTokensSellToAddToLiquidity(uint256 newAmount, uint256 decimal) external onlyOwner() {
+        numTokensSellToAddToLiquidity = newAmount*10**decimal;
+    }
    
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
-        require(maxTxPercent > 10, "Cannot set transaction amount less than 10 percent!");
+        require(maxTxPercent > 0, "Cannot set transaction amount less than 1 percent!");
         _maxTxAmount = _tTotal.mul(maxTxPercent).div(
             10**2
         );
