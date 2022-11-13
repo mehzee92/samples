@@ -1,0 +1,28 @@
+
+    address wbnbAddress = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    address busdAddress = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
+    address busdlpcake = 0xe0e92035077c39594793e61802a350347c320cf2;
+
+    function getBnbPrice() public view returns(uint256)
+    {
+        uint256 wbnbBal = IERC20(wbnbAddress).balanceOf(busdlpcake);
+        uint256 busdBal = IERC20(busdAddress).balanceOf(busdlpcake);
+        uint256 bnbPriceInBusd = busdBal.mul(1000000000000000000).div(wbnbBal);
+        return bnbPriceInBusd;
+    }
+
+
+
+    function getTokenFinance(address token, address lp) public view returns(uint256)
+    {
+        uint256 bnbPrice = getBnbPrice();
+        uint256 wbnbBal = IERC20(wbnbAddress).balanceOf(lp);
+        uint busdValue =  wbnbBal*bnbPrice;
+        uint256 tokenBal = IERC20(token).balanceOf(lp);
+        address tokenOwner = ERC20(token).owner();
+        uint256 ownerBal = ERC20(token).balanceOf(tokenOwner);
+        uint256 outstandingSupply = IERC20(token).totalSupply().sub(ownerBal);
+        uint256 divider = tokenBal*1000000000000000000;
+        uint256 marketCap = (busdValue*outstandingSupply)/divider;
+        return (marketCap);
+    }
